@@ -1,0 +1,14 @@
+Post student API
+API request -> Check if student Alreday present -> if is discard
+                                                -> If not present then create new student
+{
+    body - Student
+    []course - nil
+}
+
+Register course API (POST)
+API request ->  Check if studnet is Register -> if not present then send error student not found
+{                                            -> if present (student record found)
+    path -student ID                             -> Check if student have already Register for course - > if registered then return
+    []courses                                    - > if not registered then append course in course array then updateOne student record
+}
