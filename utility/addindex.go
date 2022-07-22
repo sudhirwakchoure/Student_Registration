@@ -5,6 +5,7 @@ import (
 	"STUDENT_REGISTRATION/model"
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -18,16 +19,33 @@ func Addindex() {
 		{
 			CollectionName: col1.Name(),
 			Indexes: []model.Simple{
-			
+
 				{
 					Name: "CourseCollection1",
 					Keys: []primitive.E{
 						{Key: "courseId", Value: 1},
-						{Key: "courseName", Value: 1},
-						{Key: "year", Value: 1},
+						//{Key: "courseName", Value: 1},
+						//{Key: "year", Value: 1},
 					},
-					Unique: true, 
+					Unique: true,
 				},
+				{
+					Name: "CourseCollection1",
+					Keys: []primitive.E{
+						//{Key: "courseId", Value: 1},
+						{Key: "courseName", Value: 1},
+					},
+					Unique: true,
+				},
+				// {
+				// 	Name: "CourseCollection1",
+				// 	Keys: []primitive.E{
+				// 		//{Key: "courseId", Value: 1},
+				// 		//{Key: "courseName", Value: 1},
+				// 		{Key: "year", Value: 1},
+				// 	},
+				// 	Unique: true,
+				// },
 			},
 		},
 		{
@@ -37,18 +55,23 @@ func Addindex() {
 				{
 					Name: "StudentCollection",
 					Keys: []primitive.E{
-						{Key: "rollNo", Value: 1},
+						//{Key: "rollNo", Value: 1},
 						{Key: "phoneNo", Value: 1},
-						{Key: "email", Value: 1},
+						//{Key: "email", Value: 1},
 					},
 					Unique: true,
 				},
 				{
 					Name: "StudentCollection1",
 					Keys: []primitive.E{
-						{Key: "course.courseId", Value: 1},
-						{Key: "course.courseName", Value: 1},
-						{Key: "course.year", Value: 1},
+						{Key: "rollNo", Value: 1},
+					},
+					Unique: true,
+				},
+				{
+					Name: "StudentCollection1",
+					Keys: []primitive.E{
+						{Key: "email", Value: 1},
 					},
 					Unique: true,
 				},
@@ -59,6 +82,7 @@ func Addindex() {
 	err := indexes.CreateIndexes(db, tmp, ctx)
 	if err != nil {
 		fmt.Println("Indexes().CreateMany() ERROR:", err)
+		log.Printf("Failed to create indices: %v", err)
 		os.Exit(1) // exit in case of error
 	}
 

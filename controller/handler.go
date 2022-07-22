@@ -31,9 +31,12 @@ func Addcoures(c *gin.Context) {
 		log.Print(err)
 		return
 	}
+
+	FindAllCources(c)
+
 	_, err = collection.InsertOne(ctx, cources)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Response": "ALready Exists"})
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": "ALready Exists "})
 		log.Print(err)
 		return
 	}
@@ -82,10 +85,13 @@ func FindAllCources(c *gin.Context) {
 			return
 		}
 
+		// collection.Find().sort({cocourse.courseId:-1}).limit(1)
+
 		Allcources = append(Allcources, course)
 	}
 
 	c.JSON(http.StatusFound, Allcources)
+
 }
 
 func DeleteCourse(c *gin.Context) {
@@ -207,7 +213,16 @@ func Getstudent(c *gin.Context) {
 
 	firstName := c.Query("firstName")
 
-	rollNo := c.Query("rollNo")
+	course := c.Query("course")
+	No := c.Query("rollNo")
+	rollNo, err := strconv.Atoi(No)
+	if err != nil {
+		log.Println("Error parsing", err)
+		c.JSON(http.StatusInternalServerError, " Error parsing please provide valid if no ")
+		return
+	}
+
+	log.Println("@@@@@@@@@@@@@@@@@@@@@", rollNo)
 	params := []primitive.M{}
 
 	filter := primitive.M{}
@@ -216,15 +231,14 @@ func Getstudent(c *gin.Context) {
 		params = append(params, primitive.M{"firstName": firstName})
 		filter = primitive.M{"firstName": firstName}
 	}
-	if rollNo != "" {
-		no, err := strconv.Atoi(rollNo)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Response": "Error parsing"})
-			return
-		}
+	if rollNo != 0 {
 
-		params = append(params, primitive.M{"rollNo": no})
-		filter = primitive.M{"rollNo": no}
+		params = append(params, primitive.M{"rollNo": rollNo})
+		filter = primitive.M{"rollNo": rollNo}
+	}
+	if course != "" {
+		params = append(params, primitive.M{"course.courseName": course})
+		filter = primitive.M{"course.courseName": course}
 	}
 
 	if len(params) > 1 {
@@ -252,54 +266,54 @@ func Getstudent(c *gin.Context) {
 	c.JSON(http.StatusFound, Allstudent)
 }
 
-type aggregateParmas struct {
-	GroupBy string
-}
+// func Aggregate(c *gin.Context) {
+// 	course := c.Query("course")
 
-func SetFliter(c *gin.Context) (params aggregateParmas) {
+// 	collection := utility.DB1()
 
-	groupBy := c.Query("groupby")
-	switch groupBy {
-	case "service":
-		params.GroupBy = "$course"
-	}
-	return
-}
+// 	pipeline := []primitive.M{}
 
-func Aggregate(c *gin.Context) {
-	var params aggregateParmas
-	pipeline := []primitive.M{}
-	groupBystage := primitive.M{
-		"$group": primitive.M{
-			"_id": params.GroupBy,
-		},
-	}
-	pipeline = append(pipeline, groupBystage)
+// 	match := primitive.M{
+// 		"$match": primitive.M{
+// 			"course.courseName": course,
+// 		},
+// 	}
+// 	// unwind := primitive.M{
+// 	// 	"$unwind": primitive.M{
+// 	// 		"path": "$course",
+// 	// 	},
+// 	// }
 
-	collection := utility.DB1()
-	result, err := collection.Aggregate(c, pipeline)
-	if err != nil {
-		log.Println("Error aggregating pipeline: ", err)
-		return
+// 	pipeline = append(pipeline, match)
 
-	}
+// 	printPipeline(pipeline)
 
-	log.Println(result)
-	allresult := []model.TestStudents{}
-	for result.Next(c) {
-		testgroup := model.TestStudents{}
-		err = result.Decode(&testgroup)
+// 	result, err := collection.Aggregate(c, pipeline)
+// 	if err != nil {
+// 		log.Println("Error aggregating pipeline: ", err)
+// 		return
 
-		// log.Printf("result :%+v", testgroup)
-		if err != nil {
-			log.Println("Error decoding aggregation result: ", err)
-			return
+// 	}
 
-		}
-		log.Printf("\nresult test group:%v\n", testgroup)
-		allresult = append(allresult, testgroup)
+// 	allresult := []model.TestStudents{}
+// 	for result.Next(c) {
+// 		student := model.TestStudents{}
+// 		err = result.Decode(&student)
 
-	}
-	c.JSON(http.StatusAccepted, allresult)
+// 		// log.Printf("result :%+v", testgroup)
+// 		if err != nil {
+// 			log.Println("Error decoding aggregation result: ", err)
+// 			return
 
-}
+// 		}
+// 		log.Printf("\nresult test group:%v\n", student)
+// 		allresult = append(allresult, student)
+
+// 	}
+// 	c.JSON(http.StatusOK, allresult)
+
+// }
+// func printPipeline(pipeline []primitive.M) {
+// 	jpipeline, _ := json.Marshal(pipeline)
+// 	log.Printf("\npipeline: %v\n", string(jpipeline))
+// }

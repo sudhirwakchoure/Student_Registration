@@ -46,7 +46,7 @@ func HandleRequests() {
 	r.PUT("/courses/:id", UpdateCourse)
 	r.POST("/students", CreateStudent)
 	r.GET("/students", Getstudent)
-	r.GET("/students/", Aggregate)
+	// r.GET("/students", Aggregate)
 
 	r.Run()
 	fmt.Printf("application listening port%s\n", port)
