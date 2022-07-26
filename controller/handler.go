@@ -31,9 +31,6 @@ func Addcoures(c *gin.Context) {
 		log.Print(err)
 		return
 	}
-
-	FindAllCources(c)
-
 	_, err = collection.InsertOne(ctx, cources)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Response": "ALready Exists "})
@@ -84,9 +81,6 @@ func FindAllCources(c *gin.Context) {
 			log.Print(err)
 			return
 		}
-
-		// collection.Find().sort({cocourse.courseId:-1}).limit(1)
-
 		Allcources = append(Allcources, course)
 	}
 
@@ -266,54 +260,56 @@ func Getstudent(c *gin.Context) {
 	c.JSON(http.StatusFound, Allstudent)
 }
 
-// func Aggregate(c *gin.Context) {
-// 	course := c.Query("course")
+func DeleteStudent(c *gin.Context) {
+	rollNo := c.Param("rollNo")
+	log.Println(rollNo)
+	var ctx context.Context
 
-// 	collection := utility.DB1()
+	collection := utility.DB1()
 
-// 	pipeline := []primitive.M{}
+	filter := primitive.M{"rollNo": rollNo}
+	log.Println(filter)
 
-// 	match := primitive.M{
-// 		"$match": primitive.M{
-// 			"course.courseName": course,
-// 		},
-// 	}
-// 	// unwind := primitive.M{
-// 	// 	"$unwind": primitive.M{
-// 	// 		"path": "$course",
-// 	// 	},
-// 	// }
+	result, err := collection.DeleteOne(ctx, filter)
+	if err != nil {
+		c.JSON(http.StatusGone, gin.H{"Response": err.Error()})
+		log.Print(err)
+		return
 
-// 	pipeline = append(pipeline, match)
+		//log.Fatal(err)
+	}
+	c.JSON(http.StatusGone, result)
 
-// 	printPipeline(pipeline)
+}
 
-// 	result, err := collection.Aggregate(c, pipeline)
-// 	if err != nil {
-// 		log.Println("Error aggregating pipeline: ", err)
-// 		return
+func UpdateStudent(c *gin.Context) {
+	collection := utility.DB1()
+	var ctx context.Context
 
-// 	}
+	rollNo := c.Param("rollNo")
 
-// 	allresult := []model.TestStudents{}
-// 	for result.Next(c) {
-// 		student := model.TestStudents{}
-// 		err = result.Decode(&student)
+	var student model.Students
+	filter := primitive.M{"rollNo": rollNo}
 
-// 		// log.Printf("result :%+v", testgroup)
-// 		if err != nil {
-// 			log.Println("Error decoding aggregation result: ", err)
-// 			return
+	var update map[string]string
 
-// 		}
-// 		log.Printf("\nresult test group:%v\n", student)
-// 		allresult = append(allresult, student)
+	err := c.BindJSON(&update)
 
-// 	}
-// 	c.JSON(http.StatusOK, allresult)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+		log.Print(err)
+		return
+	}
+	err = collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": update}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&student)
 
-// }
-// func printPipeline(pipeline []primitive.M) {
-// 	jpipeline, _ := json.Marshal(pipeline)
-// 	log.Printf("\npipeline: %v\n", string(jpipeline))
-// }
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"Response": err.Error()})
+		log.Print(err)
+		fmt.Println(err)
+		return
+
+	}
+	log.Println(student)
+
+	c.JSON(http.StatusCreated, student)
+}

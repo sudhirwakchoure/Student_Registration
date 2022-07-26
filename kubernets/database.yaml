@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: db-service
+  name: db-deplyment
+  namespace: student
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-service
+  template:
+    metadata:
+      labels:
+        app: db-service
+    spec:
+      volumes:
+        - name: volume
+          persistentVolumeClaim:
+            claimName: claim
+      containers:
+      - image: mongo
+        name: mongo
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+          - mountPath: /data/db/
+            name: volume
+        
