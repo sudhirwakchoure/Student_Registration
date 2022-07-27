@@ -46,6 +46,9 @@ func HandleRequests() {
 	r.PUT("/courses/:id", UpdateCourse)
 	r.POST("/students", CreateStudent)
 	r.GET("/students", Getstudent)
+	r.DELETE("/students/:rollNo", DeleteStudent)
+	r.PUT("/students/:rollNo", UpdateStudent)
+
 	// r.GET("/students", Aggregate)
 
 	r.Run()

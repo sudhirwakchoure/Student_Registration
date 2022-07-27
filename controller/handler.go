@@ -4,6 +4,7 @@ import (
 	"STUDENT_REGISTRATION/model"
 	"STUDENT_REGISTRATION/utility"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -59,12 +60,27 @@ func FindAllCources(c *gin.Context) {
 		filter = primitive.M{"courseName": courseName}
 	}
 	if courseId != "" {
-		params = append(params, primitive.M{"courseId": courseId})
-		filter = primitive.M{"courseId": courseId}
+		id, err := strconv.Atoi(courseId)
+		if err != nil {
+			err = errors.New("failed to convert course id to integer")
+			c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+			log.Print(err)
+			return
+		}
+		params = append(params, primitive.M{"courseId": id})
+		filter = primitive.M{"courseId": id}
 	}
 
 	if len(params) > 1 {
 		filter = primitive.M{"$and": params}
+	}
+
+	count, err := collection.CountDocuments(ctx, filter)
+	log.Println("error find", err)
+	if err != nil || count == 0 {
+		err = errors.New("no  such a course found")
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+		return
 	}
 
 	cur, err := collection.Find(ctx, filter)
@@ -89,15 +105,30 @@ func FindAllCources(c *gin.Context) {
 }
 
 func DeleteCourse(c *gin.Context) {
-	id := c.Param("id")
-	log.Println(id)
+	courseId := c.Param("id")
+
+	log.Println(courseId)
 	var ctx context.Context
 
 	collection, _ := utility.DB()
 
+	id, err := strconv.Atoi(courseId)
+	if err != nil {
+		err = errors.New("failed to convert course id to integer")
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+		log.Print(err)
+		return
+	}
+
 	filter := primitive.M{"courseId": id}
 	log.Println(filter)
 
+	count, err := collection.CountDocuments(ctx, filter)
+	if err != nil || count == 0 {
+		err = errors.New("no documents is already deleted")
+		c.JSON(http.StatusGone, gin.H{"Response": err.Error()})
+		return
+	}
 	result, err := collection.DeleteOne(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusGone, gin.H{"Response": err.Error()})
@@ -114,21 +145,26 @@ func UpdateCourse(c *gin.Context) {
 	collection, _ := utility.DB()
 	var ctx context.Context
 
-	id := c.Param("id")
+	courseId := c.Param("id")
+	id, err := strconv.Atoi(courseId)
+	if err != nil {
+		err = errors.New("failed to convert course id to integer")
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+		log.Print(err)
+		return
+	}
 
 	var course model.Courses
 	filter := primitive.M{"courseId": id}
 
-	var update map[string]string
-
-	err := c.BindJSON(&update)
+	err = c.BindJSON(&course)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
 		log.Print(err)
 		return
 	}
-	err = collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": update}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&course)
+	err = collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": course}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&course)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Response": err.Error()})
@@ -208,13 +244,7 @@ func Getstudent(c *gin.Context) {
 	firstName := c.Query("firstName")
 
 	course := c.Query("course")
-	No := c.Query("rollNo")
-	rollNo, err := strconv.Atoi(No)
-	if err != nil {
-		log.Println("Error parsing", err)
-		c.JSON(http.StatusInternalServerError, " Error parsing please provide valid if no ")
-		return
-	}
+	rollNo := c.Query("rollNo")
 
 	log.Println("@@@@@@@@@@@@@@@@@@@@@", rollNo)
 	params := []primitive.M{}
@@ -225,10 +255,15 @@ func Getstudent(c *gin.Context) {
 		params = append(params, primitive.M{"firstName": firstName})
 		filter = primitive.M{"firstName": firstName}
 	}
-	if rollNo != 0 {
-
-		params = append(params, primitive.M{"rollNo": rollNo})
-		filter = primitive.M{"rollNo": rollNo}
+	if rollNo != "" {
+		no, err := strconv.Atoi(rollNo)
+		if err != nil {
+			log.Println("Error parsing", err)
+			c.JSON(http.StatusInternalServerError, " Error parsing please provide valid if no ")
+			return
+		}
+		params = append(params, primitive.M{"rollNo": no})
+		filter = primitive.M{"rollNo": no}
 	}
 	if course != "" {
 		params = append(params, primitive.M{"course.courseName": course})
@@ -261,7 +296,14 @@ func Getstudent(c *gin.Context) {
 }
 
 func DeleteStudent(c *gin.Context) {
-	rollNo := c.Param("rollNo")
+	No := c.Param("rollNo")
+
+	rollNo, err := strconv.Atoi(No)
+	if err != nil {
+		log.Println("Error parsing", err)
+		c.JSON(http.StatusInternalServerError, " Error parsing please provide valid  no ")
+		return
+	}
 	log.Println(rollNo)
 	var ctx context.Context
 
@@ -270,6 +312,13 @@ func DeleteStudent(c *gin.Context) {
 	filter := primitive.M{"rollNo": rollNo}
 	log.Println(filter)
 
+	count, err := collection.CountDocuments(ctx, filter)
+	log.Println("error find", err)
+	if err != nil || count == 0 {
+		err = errors.New("no  such a student found")
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+		return
+	}
 	result, err := collection.DeleteOne(ctx, filter)
 	if err != nil {
 		c.JSON(http.StatusGone, gin.H{"Response": err.Error()})
@@ -285,22 +334,53 @@ func DeleteStudent(c *gin.Context) {
 func UpdateStudent(c *gin.Context) {
 	collection := utility.DB1()
 	var ctx context.Context
+	coll, _ := utility.DB()
+	courses := []model.Courses{}
 
-	rollNo := c.Param("rollNo")
+	No := c.Param("rollNo")
+	rollNo, err := strconv.Atoi(No)
+	if err != nil {
+		log.Println("Error parsing", err)
+		c.JSON(http.StatusInternalServerError, " Error parsing please provide valid  no ")
+		return
+	}
 
 	var student model.Students
 	filter := primitive.M{"rollNo": rollNo}
 
-	var update map[string]string
-
-	err := c.BindJSON(&update)
+	err = c.BindJSON(&student)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
 		log.Print(err)
 		return
 	}
-	err = collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": update}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&student)
+
+	cur, err := coll.Find(ctx, primitive.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+		log.Print(err)
+		return
+	}
+	for cur.Next(ctx) {
+		var course model.Courses
+		err := cur.Decode(&course)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Response": err.Error()})
+			log.Print(err)
+			return
+		}
+		courses = append(courses, course)
+	}
+	for _, courcess := range student.Course {
+		if !StringInSlice(courcess, courses) {
+			log.Printf("Course Not found:%+v", courcess.CourseName)
+			c.JSON(http.StatusNotFound, "please check courses list")
+			return
+		}
+	}
+
+	err = collection.FindOneAndUpdate(ctx, filter, bson.M{"$set": student}, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&student)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"Response": err.Error()})
